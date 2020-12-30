@@ -23,7 +23,6 @@ extra["vaadinVersion"] = "14.4.4"
 
 dependencies {
 	implementation("com.github.mvysny.karibudsl:karibu-dsl:$karibuDslVersion")
-
 	implementation("com.vaadin:vaadin-spring-boot-starter:${vaadinVersion}") {
 		// Webjars are only needed when running in Vaadin 13 compatibility mode
 		listOf("com.vaadin.webjar", "org.webjars.bowergithub.insites",
@@ -31,12 +30,13 @@ dependencies {
 			"org.webjars.bowergithub.vaadin", "org.webjars.bowergithub.webcomponents")
 			.forEach { exclude(group = it) }
 	}
+
+	implementation("guru.nidi:graphviz-java:0.18.0")
+	implementation("com.eclipsesource.j2v8:j2v8_linux_x86_64:4.6.0")
+
 	testImplementation("org.springframework.boot:spring-boot-starter-test") {
 		exclude("org.junit.vintage:junit-vintage-engine")
-//		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
 	}
-
-
 }
 
 dependencyManagement {
