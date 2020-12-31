@@ -1,20 +1,117 @@
 package com.goyobo.sqlonline
 
+import com.github.mvysny.karibudsl.v10.*
 import com.goyobo.sqlonline.erd.Diagram
+import com.goyobo.sqlonline.erd.TableGridListener
+import com.goyobo.sqlonline.erd.erdMenu
+import com.goyobo.sqlonline.erd.tableGrid
+import com.vaadin.flow.component.Key
+import com.vaadin.flow.component.dependency.CssImport
+import com.vaadin.flow.component.dialog.Dialog
+import com.vaadin.flow.component.grid.Grid
 import com.vaadin.flow.component.html.Image
-import com.vaadin.flow.component.orderedlayout.VerticalLayout
+import com.vaadin.flow.component.icon.VaadinIcon
 import com.vaadin.flow.router.Route
 import com.vaadin.flow.server.InputStreamFactory
 import com.vaadin.flow.server.PWA
 import com.vaadin.flow.server.StreamResource
 import guru.nidi.graphviz.engine.Format
-import guru.nidi.graphviz.engine.Graphviz
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
 @Route("")
 @PWA(name = "Project Base for Vaadin", shortName = "Project Base")
-class MainView : VerticalLayout() {
+@CssImport.Container(
+    value = [
+        CssImport("./styles/shared-styles.css")
+    ]
+)
+class MainView : KComposite() {
+    private lateinit var columnGrid: Grid<Diagram.Column>
+
+    private val tableGridListener = object : TableGridListener<Diagram.Table> {
+        override fun selected(bean: Diagram.Table) {
+            columnGrid.setItems(bean.columns)
+        }
+    }
+
+    @Suppress("unused")
+    private val root = ui {
+        horizontalLayout {
+            setSizeFull()
+
+            verticalLayout {
+                setSizeFull()
+
+                erdMenu()
+                button("Add table", VaadinIcon.PLUS.create()) {
+                    addClickListener { promptAddTable() }
+                }
+                tableGrid(tableGridListener)
+                columnGrid = grid {
+                    setSizeFull()
+                    addColumnFor(Diagram.Column::name)
+                    addColumnFor(Diagram.Column::type)
+                    addColumnFor(Diagram.Column::primaryKey)
+                }
+            }
+            verticalLayout {
+                add(previewImage())
+            }
+        }
+    }
+
+    private fun promptAddTable() {
+        Dialog().apply {
+            isCloseOnOutsideClick = false
+            val tableName = textField("Table name") {
+                isRequired = true
+                focus()
+            }
+            horizontalLayout {
+                button("Add table") {
+                    setPrimary()
+                    addClickShortcut(Key.ENTER)
+                    onLeftClick {
+                        if (tableName.value.isEmpty()) {
+                            tableName.errorMessage = "Required"
+                            tableName.isInvalid = true
+                        } else {
+                            addTable(tableName.value)
+                            close()
+                        }
+                    }
+                }
+                button("Cancel") {
+                    onLeftClick {
+                        close()
+                    }
+                }
+            }
+            open()
+        }
+    }
+
+    private fun addTable(name: String) {
+        println(name)
+    }
+
+    private fun previewImage(): Image {
+        val diagram = Diagram(SampleData.data)
+        val baos = ByteArrayOutputStream()
+        diagram.graph().render(Format.SVG).toOutputStream(baos)
+
+        val resource = StreamResource("test.svg", InputStreamFactory {
+            ByteArrayInputStream(baos.toByteArray())
+        })
+
+        return Image(resource, "test.svg")
+    }
+}
+
+object SampleData {
+    val data: ArrayList<Diagram.Table>
+
     init {
         val users = Diagram.Table("users")
         val addresses = Diagram.Table("addresses")
@@ -49,23 +146,6 @@ class MainView : VerticalLayout() {
         oAddress.foreignKey = aId
         oItem.foreignKey = iId
 
-        val diagram = Diagram(arrayListOf(users, addresses, orders, items))
-        val raw = diagram.test()
-//        println(raw)
-
-        test(raw)
+        data = arrayListOf(users, addresses, orders, items)
     }
-
-    fun test(raw: String) {
-        val baos = ByteArrayOutputStream()
-        Graphviz.fromString(raw).render(Format.SVG).toOutputStream(baos)
-        val resource = StreamResource("test.svg", InputStreamFactory {
-            ByteArrayInputStream(baos.toByteArray())
-        })
-
-        val image = Image(resource, "test.svg")
-
-        add(image)
-    }
-
 }

@@ -1,5 +1,7 @@
 package com.goyobo.sqlonline.erd
 
+import guru.nidi.graphviz.engine.Graphviz
+
 class Diagram(private val tables: ArrayList<Table>) {
 
     private val sb = StringBuilder()
@@ -16,13 +18,11 @@ class Diagram(private val tables: ArrayList<Table>) {
         sb.append("}")
     }
 
-    fun test(): String {
+    override fun toString(): String {
         return sb.toString()
     }
 
-//    fun toByteArray(): ByteArrayOutputStream {
-//
-//    }
+    fun graph(): Graphviz = Graphviz.fromString(toString())
 
     private fun writeAttrs() {
         sb.append(

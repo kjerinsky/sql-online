@@ -17,6 +17,9 @@ java.sourceCompatibility = JavaVersion.VERSION_11
 
 repositories {
 	mavenCentral()
+	maven {
+		url = uri("https://maven.vaadin.com/vaadin-addons")
+	}
 }
 
 extra["vaadinVersion"] = "14.4.4"
@@ -30,6 +33,7 @@ dependencies {
 			"org.webjars.bowergithub.vaadin", "org.webjars.bowergithub.webcomponents")
 			.forEach { exclude(group = it) }
 	}
+	implementation("com.flowingcode.addons:font-awesome-iron-iconset:2.2.0")
 
 	implementation("guru.nidi:graphviz-java:0.18.0")
 	implementation("com.eclipsesource.j2v8:j2v8_linux_x86_64:4.6.0")

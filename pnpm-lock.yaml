@@ -1,4 +1,5 @@
 dependencies:
+  '@flowingcode/font-awesome-iron-iconset': 2.2.0
   '@polymer/iron-icon': 3.0.1
   '@polymer/iron-list': 3.1.0
   '@polymer/polymer': 3.2.0
@@ -1004,6 +1005,14 @@ packages:
     dev: true
     resolution:
       integrity: sha512-bvM7Qz6eKnJVFIn+1LPtjlBFPVN5jNDc1XmN15vWe7Q3DPBufWWsLiIvUu7xW87uTG6QoggpIDnUgLQvPheU+Q==
+  /@flowingcode/font-awesome-iron-iconset/2.2.0:
+    dependencies:
+      '@polymer/iron-icon': 3.0.1
+      '@polymer/iron-iconset-svg': 3.0.1
+      '@polymer/polymer': 3.2.0
+    dev: false
+    resolution:
+      integrity: sha512-Hf0OxZxv124rFmi1eyFeFiZKESoTAWfAk0/taTOgXlVAlq+fx0gXQgnAwpMxL+Ykx+SbIB/oizmHtYFpNFL0dA==
   /@npmcli/move-file/1.0.1:
     dependencies:
       mkdirp: 1.0.4
@@ -6372,6 +6381,7 @@ packages:
     resolution:
       integrity: sha512-AX3Zw5iPruN5ie6xGRIDgqkT+ZhnRlZMLMHAs8tg7nRruy2Nb+i5o9bwghAogtM08q1dpr2LVoS8KSTMYpWXUw==
 specifiers:
+  '@flowingcode/font-awesome-iron-iconset': 2.2.0
   '@polymer/iron-icon': 3.0.1
   '@polymer/iron-list': 3.1.0
   '@polymer/polymer': 3.2.0

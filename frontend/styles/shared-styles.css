@@ -3,3 +3,6 @@
    Visit https://vaadin.com/docs/flow/theme/theming-overview.html and
    https://vaadin.com/themes/lumo for more information.
 */
+vaadin-context-menu-item iron-icon {
+    padding-right: 1em;
+}
