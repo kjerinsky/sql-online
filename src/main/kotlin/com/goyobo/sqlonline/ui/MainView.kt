@@ -1,16 +1,17 @@
-package com.goyobo.sqlonline
+package com.goyobo.sqlonline.ui
 
 import com.github.mvysny.karibudsl.v10.*
-import com.goyobo.sqlonline.erd.Diagram
-import com.goyobo.sqlonline.erd.TableGridListener
-import com.goyobo.sqlonline.erd.erdMenu
-import com.goyobo.sqlonline.erd.tableGrid
+import com.goyobo.sqlonline.data.Diagram
+import com.goyobo.sqlonline.data.ErdExport
+import com.goyobo.sqlonline.ui.erd.*
 import com.vaadin.flow.component.Key
+import com.vaadin.flow.component.UI
 import com.vaadin.flow.component.dependency.CssImport
 import com.vaadin.flow.component.dialog.Dialog
-import com.vaadin.flow.component.grid.Grid
+import com.vaadin.flow.component.html.Anchor
 import com.vaadin.flow.component.html.Image
 import com.vaadin.flow.component.icon.VaadinIcon
+import com.vaadin.flow.component.orderedlayout.VerticalLayout
 import com.vaadin.flow.router.Route
 import com.vaadin.flow.server.InputStreamFactory
 import com.vaadin.flow.server.PWA
@@ -27,36 +28,70 @@ import java.io.ByteArrayOutputStream
     ]
 )
 class MainView : KComposite() {
-    private lateinit var columnGrid: Grid<Diagram.Column>
+    private val tableData = arrayListOf<Diagram.Table>()
+
+    private lateinit var tableGrid: TableGrid
+    private lateinit var columnGrid: ColumnGrid
+    private lateinit var diagramContainer: VerticalLayout
+    private lateinit var downloader: Anchor
+
+    private val erdMenuListener = object : ErdMenuListener {
+        override fun new() {
+            tableData.clear()
+            repaint()
+        }
+
+        override fun export() {
+            // TODO UI input for filename
+            downloader.setHref(StreamResource("filename.yml", InputStreamFactory {
+                ByteArrayInputStream(ErdExport(tableData).toYml().toByteArray())
+            }))
+            UI.getCurrent().page.executeJs("$0.click()", downloader.element)
+        }
+    }
 
     private val tableGridListener = object : TableGridListener<Diagram.Table> {
-        override fun selected(bean: Diagram.Table) {
-            columnGrid.setItems(bean.columns)
+        override fun select(bean: Diagram.Table) {
+            columnGrid.setColumns(bean.columns)
+        }
+
+        override fun delete(bean: Diagram.Table) {
+            tableData.remove(bean)
+            repaint()
+        }
+    }
+
+    private val columnGridListener = object : ColumnGridListener<Diagram.Column> {
+        override fun delete(bean: Diagram.Column) {
+            val table = tableData[tableData.indexOf(bean.table)]
+            table.columns.remove(bean)
+            repaint()
         }
     }
 
     @Suppress("unused")
     private val root = ui {
+        tableData.addAll(SampleData.data)
+
         horizontalLayout {
             setSizeFull()
 
             verticalLayout {
                 setSizeFull()
 
-                erdMenu()
+                erdMenu(erdMenuListener)
                 button("Add table", VaadinIcon.PLUS.create()) {
                     addClickListener { promptAddTable() }
                 }
-                tableGrid(tableGridListener)
-                columnGrid = grid {
-                    setSizeFull()
-                    addColumnFor(Diagram.Column::name)
-                    addColumnFor(Diagram.Column::type)
-                    addColumnFor(Diagram.Column::primaryKey)
-                }
+                tableGrid = tableGrid(tableData, tableGridListener)
+                button("Add column", VaadinIcon.PLUS.create())
+                columnGrid = columnGrid(columnGridListener)
             }
-            verticalLayout {
+            diagramContainer = verticalLayout {
                 add(previewImage())
+            }
+            downloader = anchor {
+                style["display"] = "none"
             }
         }
     }
@@ -93,11 +128,23 @@ class MainView : KComposite() {
     }
 
     private fun addTable(name: String) {
-        println(name)
+        tableData.add(Diagram.Table(name))
+        repaint()
+    }
+
+    // Request UI repaint
+    private fun repaint() {
+        tableGrid.refresh()
+        columnGrid.refresh()
+        // TODO only repaint when "Auto reload preview" enabled
+        with(diagramContainer) {
+            removeAll()
+            add(previewImage())
+        }
     }
 
     private fun previewImage(): Image {
-        val diagram = Diagram(SampleData.data)
+        val diagram = Diagram(tableData)
         val baos = ByteArrayOutputStream()
         diagram.graph().render(Format.SVG).toOutputStream(baos)
 

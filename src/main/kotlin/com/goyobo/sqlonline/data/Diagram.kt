@@ -1,4 +1,4 @@
-package com.goyobo.sqlonline.erd
+package com.goyobo.sqlonline.data
 
 import guru.nidi.graphviz.engine.Graphviz
 
