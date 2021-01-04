@@ -1,0 +1,44 @@
+- users:
+    columns:
+      - user_id:
+          type: bigint
+          primary_key: true
+      - first_name:
+          type: varchar(50)
+      - last_name:
+          type: varchar(50)
+      - address_id:
+          type: bigint
+          foreign_key: addresses.address_id
+      - email:
+          type: varchar(50)
+- addresses:
+    columns:
+      - address_id:
+          type: bigint
+          primary_key: true
+      - street:
+          type: varchar(50)
+      - city:
+          type: varchar(50)
+- orders:
+    columns:
+      - order_id:
+          type: bigint
+          primary_key: true
+      - user_id:
+          type: bigint
+          foreign_key: users.user_id
+      - address_id:
+          type: bigint
+          foreign_key: addresses.address_id
+      - item_id:
+          type: bigint
+          foreign_key: items.item_id
+- items:
+    columns:
+      - item_id:
+          type: bigint
+          primary_key: true
+      - description:
+          type: text

@@ -114,9 +114,9 @@ class Diagram(private val tables: ArrayList<Table>) {
     class Table(val name: String, val columns: ArrayList<Column> = arrayListOf())
     class Column(
         val name: String,
-        val type: String,
+        var type: String? = null,
         val table: Table,
         var foreignKey: Column? = null,
-        val primaryKey: Boolean = false
+        var primaryKey: Boolean = false
     )
 }

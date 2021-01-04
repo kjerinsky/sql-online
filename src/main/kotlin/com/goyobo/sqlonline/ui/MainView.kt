@@ -2,7 +2,7 @@ package com.goyobo.sqlonline.ui
 
 import com.github.mvysny.karibudsl.v10.*
 import com.goyobo.sqlonline.data.Diagram
-import com.goyobo.sqlonline.data.ErdExport
+import com.goyobo.sqlonline.data.ErdFileManager
 import com.goyobo.sqlonline.ui.erd.*
 import com.vaadin.flow.component.Key
 import com.vaadin.flow.component.UI
@@ -19,6 +19,7 @@ import com.vaadin.flow.server.StreamResource
 import guru.nidi.graphviz.engine.Format
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.InputStream
 
 @Route("")
 @PWA(name = "Project Base for Vaadin", shortName = "Project Base")
@@ -35,16 +36,24 @@ class MainView : KComposite() {
     private lateinit var diagramContainer: VerticalLayout
     private lateinit var downloader: Anchor
 
+    private var selectedTable: Diagram.Table? = null
+
     private val erdMenuListener = object : ErdMenuListener {
         override fun new() {
-            tableData.clear()
+            clearGrids()
+            repaint()
+        }
+
+        override fun import(inputStream: InputStream) {
+            clearGrids()
+            tableData.addAll(ErdFileManager.Import(inputStream).tableData)
             repaint()
         }
 
         override fun export() {
             // TODO UI input for filename
-            downloader.setHref(StreamResource("filename.yml", InputStreamFactory {
-                ByteArrayInputStream(ErdExport(tableData).toYml().toByteArray())
+            downloader.setHref(StreamResource("filename.yaml", InputStreamFactory {
+                ByteArrayInputStream(ErdFileManager.Export(tableData).toYaml().toByteArray())
             }))
             UI.getCurrent().page.executeJs("$0.click()", downloader.element)
         }
@@ -52,6 +61,7 @@ class MainView : KComposite() {
 
     private val tableGridListener = object : TableGridListener<Diagram.Table> {
         override fun select(bean: Diagram.Table) {
+            selectedTable = bean
             columnGrid.setColumns(bean.columns)
         }
 
@@ -71,8 +81,6 @@ class MainView : KComposite() {
 
     @Suppress("unused")
     private val root = ui {
-        tableData.addAll(SampleData.data)
-
         horizontalLayout {
             setSizeFull()
 
@@ -94,6 +102,10 @@ class MainView : KComposite() {
                 style["display"] = "none"
             }
         }
+    }
+
+    init {
+        loadSampleData()
     }
 
     private fun promptAddTable() {
@@ -132,6 +144,11 @@ class MainView : KComposite() {
         repaint()
     }
 
+    private fun clearGrids() {
+        selectedTable?.columns?.clear()
+        tableData.clear()
+    }
+
     // Request UI repaint
     private fun repaint() {
         tableGrid.refresh()
@@ -154,45 +171,10 @@ class MainView : KComposite() {
 
         return Image(resource, "test.svg")
     }
-}
 
-object SampleData {
-    val data: ArrayList<Diagram.Table>
-
-    init {
-        val users = Diagram.Table("users")
-        val addresses = Diagram.Table("addresses")
-        val orders = Diagram.Table("orders")
-        val items = Diagram.Table("items")
-
-        val uId = Diagram.Column("user_id", "bigint", users, primaryKey = true)
-        val uFirstName = Diagram.Column("first_name", "varchar(50)", users)
-        val uLastName = Diagram.Column("last_name", "varchar(50)", users)
-        val uAddress = Diagram.Column("address_id", "bigint", users)
-        val uEmail = Diagram.Column("email", "varchar(50)", users)
-
-        val aId = Diagram.Column("address_id", "bigint", addresses, primaryKey = true)
-        val aStreet = Diagram.Column("street", "varchar(50)", addresses)
-        val aCity = Diagram.Column("city", "varchar(50)", addresses)
-
-        val oId = Diagram.Column("order_id", "bigint", orders, primaryKey = true)
-        val oUser = Diagram.Column("user_id", "bigint", orders)
-        val oAddress = Diagram.Column("address_id", "bigint", orders)
-        val oItem = Diagram.Column("item_id", "bigint", orders)
-
-        val iId = Diagram.Column("item_id", "bigint", items, primaryKey = true)
-        val iDescription = Diagram.Column("description", "text", items)
-
-        users.columns.addAll(listOf(uId, uFirstName, uLastName, uAddress, uEmail))
-        addresses.columns.addAll(listOf(aId, aStreet, aCity))
-        orders.columns.addAll(listOf(oId, oUser, oAddress, oItem))
-        items.columns.addAll(listOf(iId, iDescription))
-
-        uAddress.foreignKey = aId
-        oUser.foreignKey = uId
-        oAddress.foreignKey = aId
-        oItem.foreignKey = iId
-
-        data = arrayListOf(users, addresses, orders, items)
+    private fun loadSampleData() {
+        val inputStream = javaClass.classLoader.getResourceAsStream("sample/sample.yaml")
+        tableData.addAll(ErdFileManager.Import(inputStream).tableData)
+        repaint()
     }
 }

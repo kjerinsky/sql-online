@@ -4,25 +4,18 @@ import com.flowingcode.vaadin.addons.fontawesome.FontAwesome
 import com.github.mvysny.karibudsl.v10.*
 import com.vaadin.flow.component.HasComponents
 import com.vaadin.flow.component.contextmenu.MenuItem
-import com.vaadin.flow.component.html.Anchor
+import com.vaadin.flow.component.dialog.Dialog
 import com.vaadin.flow.component.icon.VaadinIcon
-import com.vaadin.flow.server.InputStreamFactory
-import com.vaadin.flow.server.StreamResource
-import java.io.ByteArrayInputStream
+import com.vaadin.flow.component.upload.Upload
+import com.vaadin.flow.component.upload.receivers.MemoryBuffer
+import java.io.InputStream
 import java.io.Serializable
-
 
 class ErdMenu(private val listener: ErdMenuListener) : KComposite() {
     private lateinit var refreshButton: MenuItem
 
     @Suppress("unused")
     private val root = ui {
-        var download = Anchor(StreamResource("filename.yml", InputStreamFactory {
-            ByteArrayInputStream("Test".toByteArray())
-        }), "Donwload")
-        download.element.setAttribute("download", true)
-        download.style["display"] = "none"
-
         horizontalLayout {
             menuBar {
                 item("File") {
@@ -33,12 +26,12 @@ class ErdMenu(private val listener: ErdMenuListener) : KComposite() {
                     subMenu.add(hr())
                     item("Import") {
                         addComponentAsFirst(FontAwesome.Solid.FILE_IMPORT.create())
+                        addClickListener { promptUpload() }
                     }
                     item("Export") {
                         addComponentAsFirst(FontAwesome.Solid.FILE_EXPORT.create())
                         addClickListener { listener.export() }
                     }
-                    subMenu.add(download)
                 }
                 item("Image") {
                     item("SVG") {
@@ -62,6 +55,23 @@ class ErdMenu(private val listener: ErdMenuListener) : KComposite() {
         }
     }
 
+    private fun promptUpload() {
+        val dialog = Dialog().apply {
+            open()
+        }
+        val buffer = MemoryBuffer()
+        val upload = Upload(buffer).apply {
+            setAcceptedFileTypes("application/x-yaml", ".yaml")
+            addSucceededListener {
+                dialog.close()
+//                val content = buffer.inputStream.bufferedReader().use(BufferedReader::readText)
+//                println(buffer.inputStream.bufferedReader().use(BufferedReader::readText))
+                listener.import(buffer.inputStream)
+            }
+        }
+        dialog.add(upload)
+    }
+
     fun isAutoReloadEnabled(): Boolean = !refreshButton.isEnabled
 }
 
@@ -69,6 +79,7 @@ interface ErdMenuListener : Serializable {
     fun new()
 
     //    fun reload()
+    fun import(inputStream: InputStream)
     fun export()
 }
 
