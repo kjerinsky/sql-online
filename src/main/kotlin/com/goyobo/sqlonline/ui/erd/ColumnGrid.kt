@@ -7,6 +7,7 @@ import com.vaadin.flow.component.button.Button
 import com.vaadin.flow.component.button.ButtonVariant
 import com.vaadin.flow.component.icon.VaadinIcon
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout
+import com.vaadin.flow.function.ValueProvider
 import java.io.Serializable
 
 class ColumnGrid(listener: ColumnGridListener<Diagram.Column>) : KComposite() {
@@ -15,25 +16,31 @@ class ColumnGrid(listener: ColumnGridListener<Diagram.Column>) : KComposite() {
         grid<Diagram.Column>()
     }
 
+    private val editColumn = ValueProvider { bean: Diagram.Column ->
+        val edit = Button("Edit")
+        val delete = Button(VaadinIcon.TRASH.create()).apply {
+            addThemeVariants(ButtonVariant.LUMO_ERROR)
+            addClickListener { listener.delete(bean) }
+        }
+        HorizontalLayout(edit, delete)
+    }
+
     init {
         root.apply {
             setSizeFull()
             addColumnFor(Diagram.Column::name).setHeader("Column")
             addColumnFor(Diagram.Column::type)
             addColumnFor(Diagram.Column::primaryKey)
-            addComponentColumn { bean: Diagram.Column ->
-                val edit = Button("Edit")
-                val delete = Button(VaadinIcon.TRASH.create()).apply {
-                    addThemeVariants(ButtonVariant.LUMO_ERROR)
-                    addClickListener { listener.delete(bean) }
-                }
-                HorizontalLayout(edit, delete)
-            }
+            addComponentColumn(editColumn)
         }
     }
 
     fun setColumns(columns: ArrayList<Diagram.Column>) {
         root.setItems(columns)
+    }
+
+    fun clearGrid() {
+        setColumns(arrayListOf())
     }
 
     fun refresh() {
@@ -42,7 +49,7 @@ class ColumnGrid(listener: ColumnGridListener<Diagram.Column>) : KComposite() {
 }
 
 interface ColumnGridListener<B> : Serializable {
-    fun delete(bean: B)
+    fun delete(column: B)
 }
 
 @VaadinDsl

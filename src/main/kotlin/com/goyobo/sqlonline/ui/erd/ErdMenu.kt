@@ -24,11 +24,11 @@ class ErdMenu(private val listener: ErdMenuListener) : KComposite() {
                         addClickListener { listener.new() }
                     }
                     subMenu.add(hr())
-                    item("Import") {
+                    item("Import Data") {
                         addComponentAsFirst(FontAwesome.Solid.FILE_IMPORT.create())
                         addClickListener { promptUpload() }
                     }
-                    item("Export") {
+                    item("Export Data") {
                         addComponentAsFirst(FontAwesome.Solid.FILE_EXPORT.create())
                         addClickListener { listener.export() }
                     }

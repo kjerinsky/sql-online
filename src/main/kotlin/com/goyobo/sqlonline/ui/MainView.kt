@@ -60,21 +60,26 @@ class MainView : KComposite() {
     }
 
     private val tableGridListener = object : TableGridListener<Diagram.Table> {
-        override fun select(bean: Diagram.Table) {
-            selectedTable = bean
-            columnGrid.setColumns(bean.columns)
+        override fun select(table: Diagram.Table?) {
+            if (table != null) {
+                columnGrid.setColumns(table.columns)
+            } else {
+                columnGrid.clearGrid()
+            }
+
+            selectedTable = table
         }
 
-        override fun delete(bean: Diagram.Table) {
-            tableData.remove(bean)
+        override fun delete(table: Diagram.Table) {
+            tableData.remove(table)
             repaint()
         }
     }
 
     private val columnGridListener = object : ColumnGridListener<Diagram.Column> {
-        override fun delete(bean: Diagram.Column) {
-            val table = tableData[tableData.indexOf(bean.table)]
-            table.columns.remove(bean)
+        override fun delete(column: Diagram.Column) {
+            val table = tableData[tableData.indexOf(column.table)]
+            table.columns.remove(column)
             repaint()
         }
     }
@@ -145,7 +150,7 @@ class MainView : KComposite() {
     }
 
     private fun clearGrids() {
-        selectedTable?.columns?.clear()
+        columnGrid.clearGrid()
         tableData.clear()
     }
 

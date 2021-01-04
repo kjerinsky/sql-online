@@ -48,8 +48,8 @@ class TableGrid(
 }
 
 interface TableGridListener<B> : Serializable {
-    fun select(bean: B)
-    fun delete(bean: B)
+    fun select(table: B?)
+    fun delete(table: B)
 }
 
 @VaadinDsl
