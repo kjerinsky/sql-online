@@ -2,6 +2,7 @@ package com.goyobo.sqlonline.ui.erd
 
 import com.flowingcode.vaadin.addons.fontawesome.FontAwesome
 import com.github.mvysny.karibudsl.v10.*
+import com.goyobo.sqlonline.ui.AboutDialog
 import com.vaadin.flow.component.HasComponents
 import com.vaadin.flow.component.contextmenu.MenuItem
 import com.vaadin.flow.component.dialog.Dialog
@@ -41,12 +42,16 @@ class ErdMenu(private val listener: ErdMenuListener) : KComposite() {
                         addComponentAsFirst(FontAwesome.Regular.FILE_CODE.create())
                     }
                 }
+                item("About") {
+                    addClickListener { AboutDialog() }
+                }
                 refreshButton = item(VaadinIcon.REFRESH.create()) {
                     isEnabled = false
                 }
             }
             checkBox("Auto reload preview") {
                 value = true
+                isEnabled = false // TODO
 
                 addValueChangeListener {
                     refreshButton.isEnabled = !it.value

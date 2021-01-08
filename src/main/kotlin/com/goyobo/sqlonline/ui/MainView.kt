@@ -1,16 +1,18 @@
 package com.goyobo.sqlonline.ui
 
 import com.github.mvysny.karibudsl.v10.*
-import com.goyobo.sqlonline.data.Diagram
-import com.goyobo.sqlonline.data.ErdFileManager
+import com.goyobo.sqlonline.Configuration
+import com.goyobo.sqlonline.data.*
 import com.goyobo.sqlonline.ui.erd.*
+import com.vaadin.componentfactory.EnhancedDialog
+import com.vaadin.flow.component.Composite
 import com.vaadin.flow.component.Key
 import com.vaadin.flow.component.UI
 import com.vaadin.flow.component.dependency.CssImport
-import com.vaadin.flow.component.dialog.Dialog
 import com.vaadin.flow.component.html.Anchor
 import com.vaadin.flow.component.html.Image
 import com.vaadin.flow.component.icon.VaadinIcon
+import com.vaadin.flow.component.notification.Notification
 import com.vaadin.flow.component.orderedlayout.VerticalLayout
 import com.vaadin.flow.router.Route
 import com.vaadin.flow.server.InputStreamFactory
@@ -25,18 +27,20 @@ import java.io.InputStream
 @PWA(name = "Project Base for Vaadin", shortName = "Project Base")
 @CssImport.Container(
     value = [
-        CssImport("./styles/shared-styles.css")
+        CssImport("./styles/shared-styles.css"),
+        CssImport("./styles/custom-form-item.css", themeFor = "vaadin-form-item")
     ]
 )
-class MainView : KComposite() {
-    private val tableData = arrayListOf<Diagram.Table>()
+class MainView(config: Configuration) : KComposite() {
+    private val erdData = ErdData()
 
     private lateinit var tableGrid: TableGrid
     private lateinit var columnGrid: ColumnGrid
     private lateinit var diagramContainer: VerticalLayout
     private lateinit var downloader: Anchor
 
-    private var selectedTable: Diagram.Table? = null
+    private var selectedTable: ErdTable? = null
+    private var currentDialog: Composite<EnhancedDialog>? = null
 
     private val erdMenuListener = object : ErdMenuListener {
         override fun new() {
@@ -46,23 +50,23 @@ class MainView : KComposite() {
 
         override fun import(inputStream: InputStream) {
             clearGrids()
-            tableData.addAll(ErdFileManager.Import(inputStream).tableData)
+            ErdFileManager.Import(inputStream, erdData)
             repaint()
         }
 
         override fun export() {
             // TODO UI input for filename
             downloader.setHref(StreamResource("filename.yaml", InputStreamFactory {
-                ByteArrayInputStream(ErdFileManager.Export(tableData).toYaml().toByteArray())
+                ByteArrayInputStream(ErdFileManager.Export(erdData.tableCollection()).toYaml().toByteArray())
             }))
             UI.getCurrent().page.executeJs("$0.click()", downloader.element)
         }
     }
 
-    private val tableGridListener = object : TableGridListener<Diagram.Table> {
-        override fun select(table: Diagram.Table?) {
+    private val tableGridListener = object : TableGridListener<ErdTable> {
+        override fun select(table: ErdTable?) {
             if (table != null) {
-                columnGrid.setColumns(table.columns)
+                columnGrid.setColumns(table.columnCollection())
             } else {
                 columnGrid.clearGrid()
             }
@@ -70,16 +74,45 @@ class MainView : KComposite() {
             selectedTable = table
         }
 
-        override fun delete(table: Diagram.Table) {
-            tableData.remove(table)
+        override fun edit(table: ErdTable) {
+            openEditTable(table)
+        }
+
+        override fun delete(table: ErdTable) {
+            erdData.deleteTable(table)
             repaint()
         }
     }
 
-    private val columnGridListener = object : ColumnGridListener<Diagram.Column> {
-        override fun delete(column: Diagram.Column) {
-            val table = tableData[tableData.indexOf(column.table)]
-            table.columns.remove(column)
+    private val columnGridListener = object : ColumnGridListener<ErdColumn> {
+        override fun edit(column: ErdColumn) {
+            openEditColumn(column)
+        }
+
+        override fun delete(column: ErdColumn) {
+            erdData.deleteColumn(column)
+            repaint()
+        }
+    }
+
+    private val tableDialogListener = object : TableDialogListener {
+        override fun createTable(table: ErdTable) {
+            erdData.createTable(table)
+            repaint()
+        }
+
+        override fun updateTable() {
+            repaint()
+        }
+    }
+
+    private val columnDialogListener = object : ColumnDialogListener {
+        override fun createColumn(column: ErdColumn) {
+            erdData.createColumn(column)
+            repaint()
+        }
+
+        override fun updateColumn() {
             repaint()
         }
     }
@@ -90,17 +123,23 @@ class MainView : KComposite() {
             setSizeFull()
 
             verticalLayout {
-                setSizeFull()
+                width = "1500px"
+                setHeightFull()
 
                 erdMenu(erdMenuListener)
-                button("Add table", VaadinIcon.PLUS.create()) {
-                    addClickListener { promptAddTable() }
+                button("Add (T)able", VaadinIcon.PLUS.create()) {
+                    addClickShortcut(Key.KEY_T)
+                    addClickListener { openCreateTable() }
                 }
-                tableGrid = tableGrid(tableData, tableGridListener)
-                button("Add column", VaadinIcon.PLUS.create())
+                tableGrid = tableGrid(erdData.tableCollection(), tableGridListener)
+                button("Add (C)olumn", VaadinIcon.PLUS.create()) {
+                    addClickShortcut(Key.KEY_C)
+                    addClickListener { openCreateColumn() }
+                }
                 columnGrid = columnGrid(columnGridListener)
             }
             diagramContainer = verticalLayout {
+                setSizeFull()
                 add(previewImage())
             }
             downloader = anchor {
@@ -111,47 +150,46 @@ class MainView : KComposite() {
 
     init {
         loadSampleData()
-    }
 
-    private fun promptAddTable() {
-        Dialog().apply {
-            isCloseOnOutsideClick = false
-            val tableName = textField("Table name") {
-                isRequired = true
-                focus()
-            }
-            horizontalLayout {
-                button("Add table") {
-                    setPrimary()
-                    addClickShortcut(Key.ENTER)
-                    onLeftClick {
-                        if (tableName.value.isEmpty()) {
-                            tableName.errorMessage = "Required"
-                            tableName.isInvalid = true
-                        } else {
-                            addTable(tableName.value)
-                            close()
-                        }
-                    }
-                }
-                button("Cancel") {
-                    onLeftClick {
-                        close()
-                    }
-                }
-            }
-            open()
+        if (config.showAbout) {
+            AboutDialog()
         }
     }
 
-    private fun addTable(name: String) {
-        tableData.add(Diagram.Table(name))
-        repaint()
+    private fun openCreateTable() {
+        if (!dialogIsOpened()) {
+            currentDialog = TableDialog(ErdTable(""), tableDialogListener, EntityMode.CREATE)
+        }
     }
+
+    private fun openEditTable(table: ErdTable) {
+        currentDialog = TableDialog(table, tableDialogListener, EntityMode.UPDATE)
+    }
+
+    private fun openCreateColumn() {
+        if (!dialogIsOpened()) {
+            if (selectedTable != null) {
+                currentDialog = ColumnDialog(
+                    ErdColumn("", table = selectedTable!!),
+                    columnDialogListener,
+                    EntityMode.CREATE,
+                    erdData
+                )
+            } else {
+                Notification.show("Select a table to add a column")
+            }
+        }
+    }
+
+    private fun openEditColumn(column: ErdColumn) {
+        currentDialog = ColumnDialog(column, columnDialogListener, EntityMode.UPDATE, erdData)
+    }
+
+    private fun dialogIsOpened() = (currentDialog != null && currentDialog?.content!!.isOpened)
 
     private fun clearGrids() {
         columnGrid.clearGrid()
-        tableData.clear()
+        erdData.clear()
     }
 
     // Request UI repaint
@@ -166,7 +204,7 @@ class MainView : KComposite() {
     }
 
     private fun previewImage(): Image {
-        val diagram = Diagram(tableData)
+        val diagram = Diagram(erdData.tableCollection())
         val baos = ByteArrayOutputStream()
         diagram.graph().render(Format.SVG).toOutputStream(baos)
 
@@ -174,12 +212,14 @@ class MainView : KComposite() {
             ByteArrayInputStream(baos.toByteArray())
         })
 
-        return Image(resource, "test.svg")
+        return Image(resource, "test.svg").apply {
+            setSizeFull()
+        }
     }
 
     private fun loadSampleData() {
         val inputStream = javaClass.classLoader.getResourceAsStream("sample/sample.yaml")
-        tableData.addAll(ErdFileManager.Import(inputStream).tableData)
+        ErdFileManager.Import(inputStream, erdData)
         repaint()
     }
 }

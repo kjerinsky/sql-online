@@ -34,6 +34,7 @@ dependencies {
 			.forEach { exclude(group = it) }
 	}
 	implementation("com.flowingcode.addons:font-awesome-iron-iconset:2.2.0")
+	implementation("com.vaadin.componentfactory:enhanced-dialog:1.0.3")
 
 	implementation("guru.nidi:graphviz-java:0.18.0")
 	implementation("com.eclipsesource.j2v8:j2v8_linux_x86_64:4.6.0")

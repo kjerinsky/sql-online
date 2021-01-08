@@ -1,0 +1,13 @@
+/*
+   https://vaadin.com/forum/thread/18436245/how-to-show-required-indicator-if-i-call-addformitem-component-string-to
+*/
+:host ::slotted(label.required)::after {
+    color: red;
+    content: var(--lumo-required-field-indicator, "*");
+    font-size: 15px;
+    right: 0;
+    padding-left: 0.2rem;
+    text-align: end;
+    transition: opacity 0.2s;
+    width: 1em;
+}

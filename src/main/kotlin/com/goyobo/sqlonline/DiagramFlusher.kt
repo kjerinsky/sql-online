@@ -9,9 +9,10 @@ import java.util.*
 class DiagramFlusher {
     private val ttl = 300_000 // 5m * 60s * 1000ms
 
+    @Suppress("unused")
     @Scheduled(fixedRate = 300_000)
     private fun flushDir() {
-        File("/tmp/GraphvizJava").listFiles().forEach {
+        File("/tmp/GraphvizJava").listFiles()?.forEach {
             val diff = Date().time - it.lastModified()
             if (diff > ttl) {
                 it.deleteRecursively()

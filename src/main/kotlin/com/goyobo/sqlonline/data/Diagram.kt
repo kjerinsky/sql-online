@@ -2,8 +2,7 @@ package com.goyobo.sqlonline.data
 
 import guru.nidi.graphviz.engine.Graphviz
 
-class Diagram(private val tables: ArrayList<Table>) {
-
+class Diagram(private val tables: MutableCollection<ErdTable>) {
     private val sb = StringBuilder()
     private val refs = StringBuilder()
 
@@ -42,7 +41,7 @@ class Diagram(private val tables: ArrayList<Table>) {
         }
     }
 
-    private fun writeTable(table: Table) {
+    private fun writeTable(table: ErdTable) {
         sb.append(
             """
             |${tab(1)}${table.name} [
@@ -51,7 +50,7 @@ class Diagram(private val tables: ArrayList<Table>) {
         """.trimMargin()
         )
         newLine()
-        writeColumns(table.columns)
+        writeColumns(table.columnCollection())
         newLine()
         sb.append(
             """
@@ -61,7 +60,7 @@ class Diagram(private val tables: ArrayList<Table>) {
         )
     }
 
-    private fun writeColumns(columns: ArrayList<Column>) {
+    private fun writeColumns(columns: MutableCollection<ErdColumn>) {
         columns.forEachIndexed { index, column ->
             val even = index % 2 == 0
             writeColumn(column, even)
@@ -71,7 +70,7 @@ class Diagram(private val tables: ArrayList<Table>) {
         }
     }
 
-    private fun writeColumn(column: Column, even: Boolean) {
+    private fun writeColumn(column: ErdColumn, even: Boolean) {
         val color = if (even) "bgcolor=\"#DCE4EB\"" else ""
         sb.append(
             """
@@ -84,7 +83,7 @@ class Diagram(private val tables: ArrayList<Table>) {
         )
     }
 
-    private fun columnKey(column: Column): String = when {
+    private fun columnKey(column: ErdColumn): String = when {
         column.primaryKey -> "\uD83D\uDD11"
         column.foreignKey != null -> {
             writeReference(column)
@@ -93,7 +92,7 @@ class Diagram(private val tables: ArrayList<Table>) {
         else -> ""
     }
 
-    private fun writeReference(column: Column) {
+    private fun writeReference(column: ErdColumn) {
         val foreignKey = column.foreignKey
         if (foreignKey != null) {
             refs.append(
@@ -110,13 +109,4 @@ class Diagram(private val tables: ArrayList<Table>) {
     private fun newLine(times: Int = 1) {
         sb.append("\n".repeat(times))
     }
-
-    class Table(val name: String, val columns: ArrayList<Column> = arrayListOf())
-    class Column(
-        val name: String,
-        var type: String? = null,
-        val table: Table,
-        var foreignKey: Column? = null,
-        var primaryKey: Boolean = false
-    )
 }

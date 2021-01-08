@@ -4,26 +4,26 @@ import java.io.BufferedReader
 import java.io.InputStream
 
 class ErdFileManager {
-    class Export(tables: ArrayList<Diagram.Table>) {
+    class Export(tables: MutableCollection<ErdTable>) {
         private val sb = StringBuilder()
 
         init {
             tables.forEach { table ->
                 writeTable(table)
-                if (table.columns.isNotEmpty()) {
+                if (table.columnCollection().isNotEmpty()) {
                     sb.appendLine(COLUMNS_KEY)
-                    table.columns.forEach { column ->
+                    table.columnCollection().forEach { column ->
                         writeColumn(column)
                     }
                 }
             }
         }
 
-        private fun writeTable(table: Diagram.Table) {
+        private fun writeTable(table: ErdTable) {
             sb.appendLine("$TABLE_PREFIX${table.name}:")
         }
 
-        private fun writeColumn(column: Diagram.Column) {
+        private fun writeColumn(column: ErdColumn) {
             sb.appendLine("$COLUMN_PREFIX${column.name}:")
             sb.appendLine(COLUMN_TYPE_PREFIX + column.type)
             if (column.primaryKey) {
@@ -37,17 +37,13 @@ class ErdFileManager {
         fun toYaml() = sb.toString()
     }
 
-    class Import(inputStream: InputStream) {
-        val tableData = arrayListOf<Diagram.Table>()
-
-        private var currentTable: Diagram.Table? = null
-        private var currentColumn: Diagram.Column? = null
-        private val columnMap = hashMapOf<String, Diagram.Column>()
+    class Import(inputStream: InputStream, private val erdData: ErdData) {
+        private var currentTable: ErdTable? = null
+        private var currentColumn: ErdColumn? = null
         private val foreignKeyMap = hashMapOf<String, String>()
 
         init {
             val reader = BufferedReader(inputStream.reader())
-
             reader.use { readFile(it) }
         }
 
@@ -73,14 +69,13 @@ class ErdFileManager {
         }
 
         private fun handleTable(line: Line) {
-            currentTable = Diagram.Table(line.tableName())
-            tableData.add(currentTable!!)
+            currentTable = ErdTable(line.tableName())
+            erdData.createTable(currentTable!!)
         }
 
         private fun handleColumn(line: Line) {
-            currentColumn = Diagram.Column(line.columnName(), table = currentTable!!)
-            currentTable!!.columns.add(currentColumn!!)
-            columnMap[columnNotation()] = currentColumn!!
+            currentColumn = ErdColumn(line.columnName(), table = currentTable!!)
+            erdData.createColumn(currentColumn!!)
         }
 
         private fun handleColumnType(line: Line) {
@@ -99,8 +94,8 @@ class ErdFileManager {
 
         private fun linkForeignKeyReferences() {
             foreignKeyMap.forEach {
-                val column = columnMap[it.key]
-                val reference = columnMap[it.value]
+                val column = erdData.columns[it.key]
+                val reference = erdData.columns[it.value]
                 column?.foreignKey = reference
             }
         }
